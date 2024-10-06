@@ -1,3 +1,4 @@
+```
 <repositories>
 	<repository>
 	    <id>jitpack.io</id>
@@ -10,3 +11,4 @@
 	<artifactId>BossbarCompass</artifactId>
 	<version>-SNAPSHOT</version>
 </dependency>
+```
