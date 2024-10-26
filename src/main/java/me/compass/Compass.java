@@ -52,6 +52,22 @@ public class Compass implements Listener {
         updateMarkers(player);
     }
 
+    public static void addGlobalMarker(String name, Location location, String permission) {
+        Brain.getInstance().getConfig().set("globalmarkers."+name+".location", location.getWorld().getName()+","+location.getX()+","+location.getY()+","+location.getZ());
+        Brain.getInstance().getConfig().set("globalmarkers."+name+".permission", permission);
+        Brain.getInstance().saveConfig();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+        	updateMarkers(player);
+        }
+    }
+    
+    public static void removeGlobalMarker(String name) {
+        Brain.getInstance().getConfig().set("globalmarkers."+name, null);
+        Brain.getInstance().saveConfig();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+        	updateMarkers(player);
+        }
+    }
 
     public static void removeMarker(Player player, String name) {
         Brain.getInstance().getConfig().set("markers."+player.getUniqueId()+"."+name, null);
