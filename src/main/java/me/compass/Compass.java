@@ -9,6 +9,7 @@ import org.bukkit.Material;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -42,6 +43,7 @@ public class Compass implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         createCompassForPlayer(event.getPlayer());
+        updateMarkers(event.getPlayer());
     }
 
     public static void addMarker(Player player, String name, Location location) {
@@ -62,39 +64,37 @@ public class Compass implements Listener {
         if (player.getRespawnLocation() != null) {
         	playerMarkers.put("🛌", player.getRespawnLocation());
         }
-        /*Essentials essentials = (Essentials) Bukkit.getPluginManager().getPlugin("Essentials");
-        for (String warp : essentials.getWarps().getList()) {
-        	try {
-        		//essentials.getWarps().getLastOwner(warp)
-        		playerMarkers.put(warp, essentials.getWarps().getWarp(warp));
-			} catch (WarpNotFoundException | InvalidWorldException e) {
-				e.printStackTrace();
-			}
-        }*/
 		return playerMarkers;
 	}
     
     private static void updateMarkers(Player player) {
-        Map<String, Location> playerMarkers = markers.getOrDefault(player, new HashMap<>());
+        Map<String, Location> playerMarkers = new HashMap<>();
+
         playerMarkers = addMarkersFromConfig("globalmarkers", player, playerMarkers);
+
         String playerIdPath = "markers." + player.getUniqueId();
-        if (Brain.getInstance().getConfig().get(playerIdPath) != null) {
-        	playerMarkers = addMarkersFromConfig(playerIdPath, player, playerMarkers);
+        if (Brain.getInstance().getConfig().contains(playerIdPath)) {
+            playerMarkers = addMarkersFromConfig(playerIdPath, player, playerMarkers);
         }
+
         markers.put(player, playerMarkers);
     }
 
     private static Map<String, Location> addMarkersFromConfig(String configPath, Player player, Map<String, Location> playerMarkers) {
-        for (String marker : Brain.getInstance().getConfig().getConfigurationSection(configPath).getKeys(true)) {
-            String permission = Brain.getInstance().getConfig().getString(configPath + "." + marker + ".permission", null);
+        ConfigurationSection configSection = Brain.getInstance().getConfig().getConfigurationSection(configPath);
+        if (configSection == null) return playerMarkers; // якщо секції не існує, повертаємо поточні маркери
+
+        for (String marker : configSection.getKeys(false)) {
+            String permission = configSection.getString(marker + ".permission");
             if (permission == null || player.hasPermission(permission)) {
-                String locationString = Brain.getInstance().getConfig().getString(configPath + "." + marker + ".location", "");
+                String locationString = configSection.getString(marker + ".location", "");
                 Location location = parseLocation(locationString);
                 if (location != null) {
                     playerMarkers.put(marker, location);
                 }
             }
         }
+
         return playerMarkers;
     }
 
@@ -149,7 +149,6 @@ public class Compass implements Listener {
         for (Map.Entry<String, Location> entry : getMarkers(player).entrySet()) {
             String name = entry.getKey();
             Location location = entry.getValue();
-
             if (location.getWorld() == player.getWorld()) {
 	            double angleToMarker = getAngleToMarker(player.getLocation(), location);
 	            int markerIndex = (int) (angleToMarker / 360 * compassLength);
@@ -160,7 +159,7 @@ public class Compass implements Listener {
 	            }
             }
         }
-        return "§7"+compassBuilder;//.substring(120,240);
+        return "§7"+compassBuilder.toString().replace("�", "");//.substring(120,240);
     }
 
 	private double getAngleToMarker(Location playerLoc, Location markerLoc) {

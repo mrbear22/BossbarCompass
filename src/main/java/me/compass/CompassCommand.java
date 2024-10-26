@@ -25,40 +25,41 @@ public class CompassCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("Цю команду може виконати лише гравець.");
+            sender.sendMessage(Brain.getInstance().getConfig().getString("messages.only-player-command"));
             return true;
         }
         Player player = (Player) sender;
         
         if (args.length == 0) {
-	        boolean hidden = !Brain.getInstance().getConfig().getBoolean(player.getUniqueId()+".hidden", false);
-	        Brain.getInstance().getConfig().set(player.getUniqueId()+".hidden", hidden);
-	        if (hidden) {
-	        	Compass.removeCompassForPlayer(player);
-	        } else {
-	        	Compass.createCompassForPlayer(player);
-	        }
-	        player.sendMessage(ChatColor.YELLOW + "Увімкнено режим відображення компасу: "+(hidden ? ChatColor.RED+"сховано" : ChatColor.GREEN+"відображається"));
-	        Brain.getInstance().saveConfig();
+            boolean hidden = !Brain.getInstance().getConfig().getBoolean("players."+player.getUniqueId()+".hidden", false);
+            Brain.getInstance().getConfig().set("players."+player.getUniqueId()+".hidden", hidden);
+            if (hidden) {
+                Compass.removeCompassForPlayer(player);
+            } else {
+                Compass.createCompassForPlayer(player);
+            }
+            String message = hidden ? Brain.getInstance().getConfig().getString("messages.compass-hidden") : Brain.getInstance().getConfig().getString("messages.compass-visible");
+            sendMessage(player,Brain.getInstance().getConfig().getString("messages.compass-status") + message);
+            Brain.getInstance().saveConfig();
         } 
         
         else if (args[0].equalsIgnoreCase("addmarker")) {
             if (args.length < 3) {
-                player.sendMessage("Неправильна кількість аргументів. Використовуйте: /command addmarker <назва> <світ>,<x>,<y>,<z>");
+                sendMessage(player, Brain.getInstance().getConfig().getString("messages.invalid-args"));
                 return true;
             }
             Player markerPlayer = Bukkit.getPlayer(args[1]);
             String markerName = args[2];
             String[] locationArgs = args[3].split(",");
             if (locationArgs.length != 4) {
-                player.sendMessage("Невірний формат локації. Використовуйте: <світ>,<x>,<y>,<z>");
+                sendMessage(player, Brain.getInstance().getConfig().getString("messages.invalid-location-format"));
                 return true;
             }
             try {
                 String worldName = locationArgs[0];
                 World world = Bukkit.getWorld(worldName);
                 if (world == null) {
-                    player.sendMessage("Світ з назвою '" + worldName + "' не знайдено.");
+                    sendMessage(player, Brain.getInstance().getConfig().getString("messages.world-not-found").replace("%world%", worldName));
                     return true;
                 }
                 double x = Double.parseDouble(locationArgs[1]);
@@ -66,34 +67,34 @@ public class CompassCommand implements CommandExecutor, TabCompleter {
                 double z = Double.parseDouble(locationArgs[3]);
                 Location location = new Location(world, x, y, z);
                 if (markerPlayer == null) {
-                    player.sendMessage("Гравця '" + args[1] + "' не знайдено.");
+                    sendMessage(player, Brain.getInstance().getConfig().getString("messages.player-not-found").replace("%player%", args[1]));
                     return true;
                 }
                 Compass.addMarker(markerPlayer, markerName, location);
-                player.sendMessage("Маркер '" + markerName + "' успішно додано для "+markerPlayer.getName()+".");
+                sendMessage(player, Brain.getInstance().getConfig().getString("messages.marker-added").replace("%marker%", markerName).replace("%player%", markerPlayer.getName()));
             } catch (NumberFormatException e) {
-                player.sendMessage("Координати мають бути числами.");
+                sendMessage(player, Brain.getInstance().getConfig().getString("messages.coordinates-not-numbers"));
                 return true;
             }
-        }
+        } 
         
         else if (args[0].equalsIgnoreCase("removemarker")) {
             if (args.length < 2) {
-                player.sendMessage("Неправильна кількість аргументів. Використовуйте: /command addmarker <назва> <світ>,<x>,<y>,<z>");
+                sendMessage(player, Brain.getInstance().getConfig().getString("messages.invalid-args"));
                 return true;
             }
             Player markerPlayer = Bukkit.getPlayer(args[1]);
             String markerName = args[2];
             if (markerPlayer == null) {
-                player.sendMessage("Гравця '" + args[1] + "' не знайдено.");
+                sendMessage(player, Brain.getInstance().getConfig().getString("messages.player-not-found").replace("%player%", args[1]));
                 return true;
             }
             if (!Compass.getMarkers(player).containsKey(markerName)) {
-                player.sendMessage("Маркеру з назвою '" + args[1] + "' не знайдено.");
+                sendMessage(player, Brain.getInstance().getConfig().getString("messages.marker-not-found").replace("%marker%", markerName));
                 return true;
             }
             Compass.removeMarker(markerPlayer, markerName);
-            player.sendMessage("Маркер '" + markerName + "' успішно видалено для "+markerPlayer.getName()+".");
+            sendMessage(player, Brain.getInstance().getConfig().getString("messages.marker-removed").replace("%marker%", markerName).replace("%player%", markerPlayer.getName()));
         }
         
         return true;
@@ -102,27 +103,23 @@ public class CompassCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
     	Player player = (Player) sender;
-        // дія
         if (args.length == 1) {
             return List.of("addmarker", "removemarker");
         }
-        // гравець
         else if (args.length == 2) {
             return Bukkit.getOnlinePlayers().stream()
                     .map(Player::getName)
                     .collect(Collectors.toList());
         }
-        // назва маркеру
         else if (args.length == 3) {
             if (args[0].equalsIgnoreCase("removemarker")) {
                 return Compass.getMarkers(player).entrySet().stream()
                         .map(entry -> entry.getKey())
                         .collect(Collectors.toList());
             } else {
-                return List.of();
+                return List.of("name");
             }
         }
-        // локація маркеру через коми (args[3] - локація)
         else if (args.length == 4 && args[0].equalsIgnoreCase("addmarker")) {
             String input = args[3];
             String[] parts = input.split(",");
@@ -140,4 +137,7 @@ public class CompassCommand implements CommandExecutor, TabCompleter {
         return List.of();
     }
     
+    public void sendMessage(Player player, String message) {
+    	player.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
+    }
 }
