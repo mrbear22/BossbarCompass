@@ -52,6 +52,9 @@ public class Config {
         config.addDefault("messages.marker-not-found", "Маркеру з назвою '%marker%' не знайдено.");
         config.addDefault("messages.marker-removed", "Маркер '%marker%' успішно видалено для %player%.");
         */
+        
+        config.options().copyDefaults(true);
+        Brain.getInstance().saveDefaultConfig();
         Brain.getInstance().saveConfig();
     }
     	

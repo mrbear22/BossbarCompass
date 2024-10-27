@@ -162,21 +162,32 @@ public class Compass implements Listener {
         int startIndex = (int) (normalizedYaw / 360 * compassLength);
         String compassDisplay = baseCompass.substring(startIndex) + baseCompass.substring(0, startIndex);
         StringBuilder compassBuilder = new StringBuilder(compassDisplay);
+
         for (Map.Entry<String, Location> entry : getMarkers(player).entrySet()) {
             String name = entry.getKey();
             Location location = entry.getValue();
+
             if (location.getWorld() == player.getWorld()) {
-	            double angleToMarker = getAngleToMarker(player.getLocation(), location);
-	            int markerIndex = (int) (angleToMarker / 360 * compassLength);
-	            int actualIndex = (markerIndex - startIndex + compassLength) % compassLength;
-	            String marker = name + " (" + (int) player.getLocation().distance(location) + "m)";
-	            if (actualIndex + marker.length() <= compassLength) {
-	                compassBuilder.replace(actualIndex, actualIndex + marker.length(), marker);
-	            }
+                double angleToMarker = getAngleToMarker(player.getLocation(), location);
+                int markerIndex = (int) (angleToMarker / 360 * compassLength);
+                int actualIndex = (markerIndex - startIndex + compassLength) % compassLength;
+                String marker = " " + name + " (" + (int) player.getLocation().distance(location) + "m) ";
+
+                int insertIndex = actualIndex;
+                while (insertIndex > 0 && compassBuilder.substring(insertIndex, Math.min(insertIndex + marker.length(), compassLength)).trim().length() > 0) {
+                    insertIndex--;
+                }
+
+                if (insertIndex + marker.length() <= compassLength) {
+                    compassBuilder.replace(insertIndex, insertIndex + marker.length(), marker);
+                }
             }
         }
-        return "§7"+compassBuilder.toString().replace("�", "");//.substring(120,240);
+
+        return "§7" + compassBuilder.toString().replace("�", "");
     }
+
+
 
 	private double getAngleToMarker(Location playerLoc, Location markerLoc) {
         double deltaX = markerLoc.getX() - playerLoc.getX();
