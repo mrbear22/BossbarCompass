@@ -18,6 +18,8 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import net.md_5.bungee.api.ChatColor;
+
 public class Compass implements Listener {
 
 	private Plugin plugin = Brain.getInstance();
@@ -162,16 +164,24 @@ public class Compass implements Listener {
         int startIndex = (int) (normalizedYaw / 360 * compassLength);
         String compassDisplay = baseCompass.substring(startIndex) + baseCompass.substring(0, startIndex);
         StringBuilder compassBuilder = new StringBuilder(compassDisplay);
+        String kmUnit = Config.getTranslation("kilometer", "km");
+        String mUnit = Config.getTranslation("meter", "m");
 
         for (Map.Entry<String, Location> entry : getMarkers(player).entrySet()) {
             String name = entry.getKey();
             Location location = entry.getValue();
 
             if (location.getWorld() == player.getWorld()) {
+                double distance = player.getLocation().distance(location);
                 double angleToMarker = getAngleToMarker(player.getLocation(), location);
                 int markerIndex = (int) (angleToMarker / 360 * compassLength);
                 int actualIndex = (markerIndex - startIndex + compassLength) % compassLength;
-                String marker = " " + name + " (" + (int) player.getLocation().distance(location) + "m) ";
+
+                String formattedDistance = (distance >= 1000)
+                        ? String.format("%.1f %s", distance / 1000, kmUnit)
+                        : String.format("%d %s", (int) distance, mUnit);
+
+                String marker = " " + ChatColor.translateAlternateColorCodes('&', name) + ChatColor.GRAY + " (" + formattedDistance + ") ";
 
                 int insertIndex = actualIndex;
                 while (insertIndex > 0 && compassBuilder.substring(insertIndex, Math.min(insertIndex + marker.length(), compassLength)).trim().length() > 0) {
@@ -184,9 +194,8 @@ public class Compass implements Listener {
             }
         }
 
-        return "§7" + compassBuilder.toString().replace("�", "");
+        return ChatColor.GRAY + compassBuilder.toString().replace("�", "");
     }
-
 
 
 	private double getAngleToMarker(Location playerLoc, Location markerLoc) {
@@ -200,6 +209,7 @@ public class Compass implements Listener {
         @Override
         public void run() {
             for (Player player : Bukkit.getOnlinePlayers()) {
+                updateMarkers(player);
             	updateCompassForPlayer(player);
             }
         }

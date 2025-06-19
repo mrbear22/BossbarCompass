@@ -36,6 +36,8 @@ public class Config {
         config.addDefault("messages.coordinates-not-numbers", "&cCoordinates must be numbers.");
         config.addDefault("messages.marker-not-found", "&cMarker with name '%marker%' not found.");
         config.addDefault("messages.marker-removed", "&aMarker '%marker%' successfully removed for %player%.");
+        config.addDefault("messages.meter", "m");
+        config.addDefault("messages.kilometer", "km");
 
         
         /*
@@ -58,4 +60,11 @@ public class Config {
         Brain.getInstance().saveConfig();
     }
     	
+    public static String getTranslation(String node, String translation) {
+    	if (Brain.getInstance().getConfig().get("messages."+node) != null) {
+    		translation = Brain.getInstance().getConfig().getString("messages."+node);
+    	}
+        return translation;
+    }
+    
 }
